@@ -1,0 +1,3 @@
+[submodule "external_apps/mozilla_extras"]
+	path = external_apps/mozilla_extras
+	url = git://github.com/mozilla/mozilla-pootle-extras.git

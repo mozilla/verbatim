@@ -1,0 +1,17 @@
+***************
+*** 443,449 ****
+          unit_position = store_preceding % unit_rows
+          page_length = pager.end_index() - pager.start_index() + 1
+          if page_length < unit_rows:
+-             units_query = store.units[:page_length]
+              page = store_preceding / unit_rows
+              units = paginate(request, units_query, items=unit_rows, page=page, orphans=0).object_list
+          elif unit_position < context_rows:
+--- 443,449 ----
+          unit_position = store_preceding % unit_rows
+          page_length = pager.end_index() - pager.start_index() + 1
+          if page_length < unit_rows:
++             units_query = store.units[page_length:]
+              page = store_preceding / unit_rows
+              units = paginate(request, units_query, items=unit_rows, page=page, orphans=0).object_list
+          elif unit_position < context_rows:
