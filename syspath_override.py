@@ -26,9 +26,16 @@
 
 import os
 import sys
+import site
+
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
-sys.path.insert(0, ROOT_DIR) # Top level directory
+#sys.path.insert(0, ROOT_DIR) # Top level directory
 
+site.addsitedir(os.path.join(ROOT_DIR, 'vendor'))
+site.addsitedir(os.path.join(ROOT_DIR, 'vendor/lib/python'))
+
+POOTLE_DIR = os.path.join(ROOT_DIR, 'vendor/src/pootle/pootle')
+sys.path.insert(0, os.path.join(POOTLE_DIR, 'apps'))
 sys.path.insert(0, os.path.join(ROOT_DIR, 'external_apps')) # external reusable apps
-sys.path.insert(0, os.path.join(ROOT_DIR, 'local_apps')) # apps developed specifically for Pootle
+#sys.path.insert(0, os.path.join(ROOT_DIR, 'local_apps')) # apps developed specifically for Pootle

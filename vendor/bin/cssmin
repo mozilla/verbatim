@@ -1,0 +1,9 @@
+#!/Users/peterbe/virtualenvs/verbatim-pootle2.5/bin/python2.6
+# EASY-INSTALL-ENTRY-SCRIPT: 'cssmin==0.1.4','console_scripts','cssmin'
+__requires__ = 'cssmin==0.1.4'
+import sys
+from pkg_resources import load_entry_point
+
+sys.exit(
+   load_entry_point('cssmin==0.1.4', 'console_scripts', 'cssmin')()
+)
