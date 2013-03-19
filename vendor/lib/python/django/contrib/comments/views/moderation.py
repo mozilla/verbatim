@@ -1,10 +1,12 @@
+from __future__ import absolute_import
+
 from django import template
 from django.conf import settings
-from django.shortcuts import get_object_or_404, render_to_response
-from django.contrib.auth.decorators import login_required, permission_required
-from utils import next_redirect, confirmation_view
 from django.contrib import comments
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.comments import signals
+from django.contrib.comments.views.utils import next_redirect, confirmation_view
+from django.shortcuts import get_object_or_404, render_to_response
 from django.views.decorators.csrf import csrf_protect
 
 
@@ -88,7 +90,7 @@ def approve(request, comment_id, next=None):
         )
 
 # The following functions actually perform the various flag/aprove/delete
-# actions. They've been broken out into seperate functions to that they
+# actions. They've been broken out into separate functions to that they
 # may be called from admin actions.
 
 def perform_flag(request, comment):

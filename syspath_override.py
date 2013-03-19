@@ -30,12 +30,22 @@ import site
 
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
-#sys.path.insert(0, ROOT_DIR) # Top level directory
+POOTLE_DIR = os.path.join(ROOT_DIR, 'vendor/src/pootle/pootle')
+
+# Adjust the python path and put local packages in front.
+prev_sys_path = list(sys.path)
 
 site.addsitedir(os.path.join(ROOT_DIR, 'vendor'))
 site.addsitedir(os.path.join(ROOT_DIR, 'vendor/lib/python'))
 
-POOTLE_DIR = os.path.join(ROOT_DIR, 'vendor/src/pootle/pootle')
 sys.path.insert(0, os.path.join(POOTLE_DIR, 'apps'))
 sys.path.insert(0, os.path.join(ROOT_DIR, 'external_apps')) # external reusable apps
 #sys.path.insert(0, os.path.join(ROOT_DIR, 'local_apps')) # apps developed specifically for Pootle
+
+# Move the new items to the front of sys.path. (via virtualenv)
+new_sys_path = []
+for item in list(sys.path):
+    if item not in prev_sys_path:
+        new_sys_path.append(item)
+        sys.path.remove(item)
+sys.path[:0] = new_sys_path
