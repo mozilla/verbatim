@@ -1,6 +1,6 @@
 [submodule "external_apps/mozilla_extras"]
 	path = external_apps/mozilla_extras
-	url = git://gitmirror.mozilla.org/mozilla/mozilla-pootle-extras
+	url = https://github.com/mozilla/mozilla-pootle-extras.git
 [submodule "vendor/src/pootle"]
 	path = vendor/src/pootle
 	url = https://github.com/translate/pootle.git
