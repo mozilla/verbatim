@@ -97,6 +97,10 @@ def language_list(request):
 
 def login(request):
     class LangAuthenticationForm(AuthenticationForm):
+        # override because Django 1.3 makes this 30 characters only
+        # and 75 is the varchar length of the auth.User model
+        username = forms.CharField(label=_("Username"), max_length=75)
+
         language = forms.ChoiceField(label=_('Interface Language'), choices=language_list(request),
                                      initial="", required=False)
 
