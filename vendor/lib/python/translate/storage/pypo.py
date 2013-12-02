@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # Copyright 2002-2009 Zuza Software Foundation
+# Copyright 2013 F Wolff
 #
 # This file is part of the Translate Toolkit.
 #
@@ -26,16 +27,16 @@ from __future__ import generators
 import copy
 import cStringIO
 import re
+import textwrap
 
 from translate.lang import data
 from translate.misc.multistring import multistring
 from translate.misc import quote
-from translate.misc import textwrap
 from translate.storage import pocommon, base, poparser
 from translate.storage.pocommon import encodingToUse
 
 lsep = "\n#: "
-"""Seperator for #: entries"""
+"""Separator for #: entries"""
 
 # general functions for quoting / unquoting po strings
 
@@ -67,44 +68,44 @@ def unescapehandler(escape):
     return po_unescape_map.get(escape, escape)
 
 
-def wrapline(line):
-    """Wrap text for po files."""
-    wrappedlines = textwrap.wrap(line, 76, replace_whitespace=False, expand_tabs=False, drop_whitespace=False)
+try:
+    wrapper = textwrap.TextWrapper(
+            width=77,
+            replace_whitespace=False,
+            expand_tabs=False,
+            drop_whitespace=False
+    )
+except TypeError:
+    # Python < 2.6 didn't support drop_whitespace
+    from translate.misc import textwrap
+    wrapper = textwrap.TextWrapper(width=77)
 
-    # Lines should not start with a space...
-    if len(wrappedlines) > 1:
-        for index, line in enumerate(wrappedlines[1:]):
-            if line.startswith(' '):
-                # Remove the space at the beginning of the line:
-                wrappedlines[index+1] = line[1:]
-
-                # Append a space to the previous line:
-                wrappedlines[index] += ' '
-    return wrappedlines
+wrapper.wordsep_re = re.compile(
+    r'(\s+|'                                  # any whitespace
+    r'[\w\!\'\&\.\,\?]+\s+|'                  # space should go with a word
+    r'[^\s\w]*\w+[a-zA-Z]-(?=\w+[a-zA-Z])|'   # hyphenated words
+    r'(?<=[\w\!\"\'\&\.\,\?])-{2,}(?=\w))')   # em-dash
+wrapper.wordsep_re_uni = re.compile(wrapper.wordsep_re.pattern, re.UNICODE)
 
 
 def quoteforpo(text):
     """Quotes the given text for a PO file, returning quoted and
     escaped lines"""
-    polines = []
     if text is None:
-        return polines
-    lines = text.split("\n")
-    if len(lines) > 1 or (len(lines) == 1 and len(lines[0]) > 71):
-        if len(lines) != 2 or lines[1]:
-            polines.extend(['""'])
-        for line in lines[:-1]:
-            #TODO: We should only wrap after escaping
-            lns = wrapline(line)
-            if len(lns) > 0:
-                for ln in lns[:-1]:
-                    polines.extend(['"' + escapeforpo(ln) + '"'])
-                if lns[-1]:
-                    polines.extend(['"' + escapeforpo(lns[-1]) + '\\n"'])
-            else:
-                polines.extend(['"\\n"'])
-    if lines[-1]:
-        polines.extend(['"' + escapeforpo(line) + '"' for line in wrapline(lines[-1])])
+        return []
+    text = escapeforpo(text)
+    lines = text.split(u"\\n")
+    for i, l in enumerate(lines[:-1]):
+        lines[i] = l + u"\\n"
+
+    polines = []
+    len_lines = len(lines)
+    if len_lines > 2 or (len_lines == 2 and lines[1]) or len(lines[0]) > 71:
+        polines.append(u'""')
+    for line in lines:
+        lns = wrapper.wrap(line)
+        for ln in lns:
+            polines.append(u'"%s"' % ln)
     return polines
 
 

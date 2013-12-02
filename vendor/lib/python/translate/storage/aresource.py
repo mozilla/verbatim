@@ -18,25 +18,30 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 
-"""module for handling Android resource files"""
-
-from lxml import etree
+"""Module for handling Android String resource files."""
 
 import re
 
-from translate.storage import lisa
-from translate.storage import base
+from lxml import etree
+
 from translate.lang import data
+from translate.storage import base, lisa
+
 
 EOF = None
-WHITESPACE = ' \n\t' # Whitespace that we collapse
+WHITESPACE = ' \n\t'  # Whitespace that we collapse.
 MULTIWHITESPACE = re.compile('[ \n\t]{2}')
-OPEN_TAG_TO_ESCAPE = re.compile('<(?!/?\S*>)')
+
 
 class AndroidResourceUnit(base.TranslationUnit):
-    """A single term in the Android resource file."""
+    """A single entry in the Android String resource file."""
     rootNode = "string"
     languageNode = "string"
+
+    @classmethod
+    def createfromxmlElement(cls, element):
+        term = cls(None, xmlelement = element)
+        return term
 
     def __init__(self, source, empty=False, xmlelement=None, **kwargs):
         if xmlelement is not None:
@@ -48,14 +53,23 @@ class AndroidResourceUnit(base.TranslationUnit):
             self.setid(source)
         super(AndroidResourceUnit, self).__init__(source)
 
-    def getid(self):
-        return self.xmlelement.get("name")
+    def istranslatable(self):
+        return (
+            bool(self.getid())
+            and self.xmlelement.get('translatable') != 'false'
+        )
 
-    def getcontext(self):
+    def isblank(self):
+        return not bool(self.getid())
+
+    def getid(self):
         return self.xmlelement.get("name")
 
     def setid(self, newid):
         return self.xmlelement.set("name", newid)
+
+    def getcontext(self):
+        return self.xmlelement.get("name")
 
     def unescape(self, text):
         '''
@@ -229,13 +243,20 @@ class AndroidResourceUnit(base.TranslationUnit):
 
     def settarget(self, target):
         if '<' in target:
-            # Handle text with markup
-            target = self.escape(target).replace('&', '&amp;')
-            target = OPEN_TAG_TO_ESCAPE.sub('&lt;', target)
-            # Parse new XML
-            newstring = etree.fromstring('<string>%s</string>' % target)
+            # Handle text with possible markup
+            target = target.replace('&', '&amp;')
+            try:
+                # Try as XML
+                newstring = etree.fromstring('<string>%s</string>' % target)
+            except:
+                # Fallback to string with XML escaping
+                target = target.replace('<', '&lt;')
+                newstring = etree.fromstring('<string>%s</string>' % target)
             # Update text
-            self.xmlelement.text = newstring.text
+            if newstring.text is None:
+                self.xmlelement.text = ''
+            else:
+                self.xmlelement.text = newstring.text
             # Remove old elements
             for x in self.xmlelement.iterchildren():
                 self.xmlelement.remove(x)
@@ -249,20 +270,15 @@ class AndroidResourceUnit(base.TranslationUnit):
 
     def gettarget(self, lang=None):
         # Grab inner text
-        target = (self.xmlelement.text or u'')
+        target = self.unescape(self.xmlelement.text or u'')
         # Include markup as well
         target += u''.join([data.forceunicode(etree.tostring(child, encoding='utf-8')) for child in self.xmlelement.iterchildren()])
-        return self.unescape(target)
+        return target
 
     target = property(gettarget, settarget)
 
     def getlanguageNode(self, lang=None, index=None):
         return self.xmlelement
-
-    def createfromxmlElement(cls, element):
-        term = cls(None, xmlelement = element)
-        return term
-    createfromxmlElement = classmethod(createfromxmlElement)
 
     # Notes are handled as previous sibling comments.
     def addnote(self, text, origin=None, position="append"):
@@ -303,9 +319,9 @@ class AndroidResourceUnit(base.TranslationUnit):
 
 
 class AndroidResourceFile(lisa.LISAfile):
-    """Class representing a Android resource file store."""
+    """Class representing an Android String resource file store."""
     UnitClass = AndroidResourceUnit
-    Name = _("Android Resource")
+    Name = _("Android String Resource")
     Mimetypes = ["application/xml"]
     Extensions = ["xml"]
     rootNode = "resources"

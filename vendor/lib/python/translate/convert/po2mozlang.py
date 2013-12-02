@@ -24,18 +24,20 @@
 """Convert Gettext PO localization files to Mozilla .lang files.
 """
 
+from translate.convert import convert
 from translate.storage import mozilla_lang as lang
 from translate.storage import po
 
 
 class po2lang:
 
-    def __init__(self, duplicatestyle="msgctxt"):
+    def __init__(self, duplicatestyle="msgctxt", mark_active=True):
         self.duplicatestyle = duplicatestyle
+        self.mark_active = mark_active
 
     def convertstore(self, inputstore, includefuzzy=False):
         """converts a file to .lang format"""
-        thetargetfile = lang.LangStore()
+        thetargetfile = lang.LangStore(mark_active=self.mark_active)
 
         # Run over the po units
         for pounit in inputstore.units:
@@ -45,19 +47,24 @@ class po2lang:
             if includefuzzy or not pounit.isfuzzy():
                 newunit.settarget(pounit.target)
             else:
-                newunit.settarget(pounit.source)
+                newunit.settarget("")
             if pounit.getnotes('developer'):
                 newunit.addnote(pounit.getnotes('developer'), 'developer')
         return thetargetfile
 
 
-def convertlang(inputfile, outputfile, templates, includefuzzy=False):
+def convertlang(inputfile, outputfile, templates, includefuzzy=False, mark_active=True,
+                outputthreshold=None, remove_untranslated=None):
     """reads in stdin using fromfileclass, converts using convertorclass,
     writes to stdout"""
     inputstore = po.pofile(inputfile)
+
+    if not convert.should_output_store(inputstore, outputthreshold):
+        return False
+
     if inputstore.isempty():
         return 0
-    convertor = po2lang()
+    convertor = po2lang(mark_active=mark_active)
     outputstore = convertor.convertstore(inputstore, includefuzzy)
     outputfile.write(str(outputstore))
     return 1
@@ -70,13 +77,16 @@ formats = {
 
 
 def main(argv=None):
-    from translate.convert import convert
     from translate.misc import stdiotell
     import sys
     sys.stdout = stdiotell.StdIOWrapper(sys.stdout)
     parser = convert.ConvertOptionParser(formats, usetemplates=True,
                                            description=__doc__)
+    parser.add_option("", "--mark-active", dest="mark_active", default=False,
+            action="store_true", help="mark the file as active")
+    parser.add_threshold_option()
     parser.add_fuzzy_option()
+    parser.passthrough.append("mark_active")
     parser.run(argv)
 
 

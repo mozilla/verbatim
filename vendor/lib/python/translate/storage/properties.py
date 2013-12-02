@@ -44,12 +44,11 @@ Java
     pairs that are not translated.
 
     The following `.properties file description
-    <http://java.sun.com/j2se/1.4.2/docs/api/java/util/Properties.html#load(java.io.InputStream)>`_
-    and `example <http://www.exampledepot.com/egs/java.util/Props.html>`_ give
-    some good references to the .properties specification.
+    <http://docs.oracle.com/javase/1.4.2/docs/api/java/util/Properties.html#load(java.io.InputStream)>`_
+    gives a good references to the .properties specification.
 
-    Properties file may also hold Java
-    `MessageFormat <http://java.sun.com/j2se/1.4.2/docs/api/java/text/MessageFormat.html>`_
+    Properties file may also hold Java `MessageFormat
+    <http://docs.oracle.com/javase/1.4.2/docs/api/java/text/MessageFormat.html>`_
     messages.  No special handling is provided in this storage class for
     MessageFormat, but this may be implemented in future.
 
@@ -63,8 +62,8 @@ Mozilla
 
 Strings
     Mac OS X strings files are implemented using
-    `these <http://developer.apple.com/mac/library/documentation/MacOSX/Conceptual/BPInternational/Articles/StringsFiles.html>`_
-    `two <http://developer.apple.com/mac/library/documentation/Cocoa/Conceptual/LoadingResources/Strings/Strings.html>`_
+    `these <https://developer.apple.com/library/mac/#documentation/MacOSX/Conceptual/BPInternational/Articles/StringsFiles.html>`_
+    `two <https://developer.apple.com/library/mac/#documentation/Cocoa/Conceptual/LoadingResources/Strings/Strings.html>`_
     articles as references.
 
 Flex
@@ -130,7 +129,7 @@ eol = "\n"
 def _find_delimiter(line, delimiters):
     """Find the type and position of the delimiter in a property line.
 
-    Property files can be delimeted by "=", ":" or whitespace (space for now).
+    Property files can be delimited by "=", ":" or whitespace (space for now).
     We find the position of each delimiter, then find the one that appears
     first.
 
@@ -178,7 +177,7 @@ def _find_delimiter(line, delimiters):
 
 
 def find_delimeter(line):
-    """Spelling error that is kept around for in case someone relies on it.
+    """Misspelled function that is kept around in case someone relies on it.
 
     Deprecated."""
     warnings.warn("deprecated use Dialect.find_delimiter instead",
@@ -267,11 +266,11 @@ def _key_strip(key):
 
     :param key: A properties key
     :type key: str
-    :return: Key without any uneeded whitespace
+    :return: Key without any unneeded whitespace
     :rtype: str
     """
     newkey = key.rstrip()
-    # If line now end in \ we put back the whitespace that was escaped
+    # If string now ends in \ we put back the whitespace that was escaped
     if newkey[-1:] == "\\":
         newkey += key[len(newkey):len(newkey)+1]
     return newkey.lstrip()
@@ -308,17 +307,17 @@ class Dialect(object):
     encode = classmethod(encode)
 
     def find_delimiter(cls, line):
-        """Find the delimeter"""
+        """Find the delimiter"""
         return _find_delimiter(line, cls.delimiters)
     find_delimiter = classmethod(find_delimiter)
 
     def key_strip(cls, key):
-        """Strip uneeded characters from the key"""
+        """Strip unneeded characters from the key"""
         return _key_strip(key)
     key_strip = classmethod(key_strip)
 
     def value_strip(cls, value):
-        """Strip uneeded characters from the value"""
+        """Strip unneeded characters from the value"""
         return value.lstrip()
     value_strip = classmethod(value_strip)
 
@@ -384,7 +383,7 @@ class DialectStrings(Dialect):
     def key_strip(cls, key):
         """Strip unneeded characters from the key"""
         newkey = key.rstrip().rstrip('"')
-        # If line now end in \ we put back the char that was escaped
+        # If string now ends in \ we put back the char that was escaped
         if newkey[-1:] == "\\":
             newkey += key[len(newkey):len(newkey)+1]
         ret = newkey.lstrip().lstrip('"')
@@ -392,9 +391,9 @@ class DialectStrings(Dialect):
     key_strip = classmethod(key_strip)
 
     def value_strip(cls, value):
-        """Strip uneeded characters from the value"""
+        """Strip unneeded characters from the value"""
         newvalue = value.rstrip().rstrip(';').rstrip('"')
-        # If line now end in \ we put back the char that was escaped
+        # If string now ends in \ we put back the char that was escaped
         if newvalue[-1:] == "\\":
             newvalue += value[len(newvalue):len(newvalue)+1]
         ret = newvalue.lstrip().lstrip('"')
@@ -412,7 +411,7 @@ class propunit(base.TranslationUnit):
     comments associated."""
 
     def __init__(self, source="", personality="java"):
-        """construct a blank propunit"""
+        """Construct a blank propunit."""
         self.personality = get_dialect(personality)
         super(propunit, self).__init__(source)
         self.name = u""
@@ -423,43 +422,45 @@ class propunit(base.TranslationUnit):
         self.source = source
         # a pair of symbols to enclose delimiter on the output
         # (a " " can be used for the sake of convenience)
-        self.out_delimiter_wrappers = getattr(self.personality, 'out_delimiter_wrappers', u'')
-        # symbol which should ends every property sentence (";" is required for
-        # Mac OS X strings
+        self.out_delimiter_wrappers = getattr(self.personality,
+                                              'out_delimiter_wrappers', u'')
+        # symbol that should end every property sentence
+        # (e.g. ";" is required for Mac OS X strings)
         self.out_ending = getattr(self.personality, 'out_ending', u'')
+
+    def getsource(self):
+        value = quote.propertiesdecode(self.value)
+        return value
 
     def setsource(self, source):
         self._rich_source = None
         source = data.forceunicode(source)
         self.value = self.personality.encode(source or u"", self.encoding)
 
-    def getsource(self):
-        value = quote.propertiesdecode(self.value)
-        return value
-
     source = property(getsource, setsource)
-
-    def settarget(self, target):
-        self._rich_target = None
-        target = data.forceunicode(target)
-        self.translation = self.personality.encode(target or u"", self.encoding)
 
     def gettarget(self):
         translation = quote.propertiesdecode(self.translation)
         translation = re.sub(u"\\\\ ", u" ", translation)
         return translation
 
+    def settarget(self, target):
+        self._rich_target = None
+        target = data.forceunicode(target)
+        self.translation = self.personality.encode(target or u"",
+                                                   self.encoding)
+
     target = property(gettarget, settarget)
 
-    def _get_encoding(self):
+    @property
+    def encoding(self):
         if self._store:
             return self._store.encoding
         else:
             return self.personality.default_encoding
-    encoding = property(_get_encoding)
 
     def __str__(self):
-        """Convert to a string. double check that unicode is handled
+        """Convert to a string. Double check that unicode is handled
         somehow here."""
         source = self.getoutput()
         assert isinstance(source, unicode)
@@ -475,7 +476,8 @@ class propunit(base.TranslationUnit):
             return notes + u"\n"
         else:
             self.value = self.personality.encode(self.source, self.encoding)
-            self.translation = self.personality.encode(self.target, self.encoding)
+            self.translation = self.personality.encode(self.target,
+                                                       self.encoding)
             # encode key, if needed
             key = self.name
             kwc = self.personality.key_wrap_char
@@ -491,11 +493,14 @@ class propunit(base.TranslationUnit):
             wrappers = self.out_delimiter_wrappers
             delimiter = '%s%s%s' % (wrappers, self.delimiter, wrappers)
             ending = self.out_ending
-            return u"%(notes)s%(key)s%(del)s%(value)s%(ending)s\n" % {"notes": notes,
-                                                            "key": key,
-                                                            "del": delimiter,
-                                                            "value": value,
-                                                            "ending": ending}
+            out_dict = {
+                "notes": notes,
+                "key": key,
+                "del": delimiter,
+                "value": value,
+                "ending": ending,
+            }
+            return u"%(notes)s%(key)s%(del)s%(value)s%(ending)s\n" % out_dict
 
     def getlocations(self):
         return [self.name]
@@ -550,7 +555,9 @@ class propfile(base.TranslationStore):
     def parse(self, propsrc):
         """Read the source of a properties file in and include them
         as units."""
-        text, encoding = self.detect_encoding(propsrc, default_encodings=[self.personality.default_encoding, 'utf-8', 'utf-16'])
+        text, encoding = self.detect_encoding(propsrc,
+            default_encodings=[self.personality.default_encoding, 'utf-8',
+                               'utf-16'])
         self.encoding = encoding
         propsrc = text
 

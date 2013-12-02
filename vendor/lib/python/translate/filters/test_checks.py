@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from py.test import mark
+from pytest import mark
 
 from translate.filters import checks
 from translate.lang import data
@@ -152,6 +152,21 @@ def test_accelerators():
     # Bug 289: accept accented accelerator characters
     afchecker = checks.StandardChecker(checks.CheckerConfig(accelmarkers="&", targetlanguage="fi"))
     assert passes(afchecker.accelerators, "&Reload Frame", "P&äivitä kehys")
+
+    trchecker = checks.StandardChecker(checks.CheckerConfig(accelmarkers="&", targetlanguage="tr"))
+    assert passes(trchecker.accelerators, "&Download", "&İndir")
+    assert passes(trchecker.accelerators, "&Business", "İ&ş")
+    assert passes(trchecker.accelerators, "&Remove", "Kald&ır")
+    assert passes(trchecker.accelerators, "&Three", "&Üç")
+    assert passes(trchecker.accelerators, "&Three", "Ü&ç")
+    assert passes(trchecker.accelerators, "&Before", "&Önce")
+    assert passes(trchecker.accelerators, "Fo&ur", "D&ört")
+    assert passes(trchecker.accelerators, "Mo&dern", "Ça&ğdaş")
+    assert passes(trchecker.accelerators, "Mo&dern", "&Çağdaş")
+    assert passes(trchecker.accelerators, "&February", "&Şubat")
+    assert passes(trchecker.accelerators, "P&lain", "D&üz")
+    assert passes(trchecker.accelerators, "GAR&DEN", "BA&Ğ")
+
     # Problems:
     # Accelerator before variable - see test_acceleratedvariables
 
@@ -369,6 +384,7 @@ def test_filepaths():
     stdchecker = checks.StandardChecker()
     assert passes(stdchecker.filepaths, "%s to the file /etc/hosts on your system.", "%s na die leer /etc/hosts op jou systeem.")
     assert fails(stdchecker.filepaths, "%s to the file /etc/hosts on your system.", "%s na die leer /etc/gasheer op jou systeem.")
+    assert passes(stdchecker.filepaths, "Text with <br />line break", "Teks met <br /> lynbreuk")
 
 
 def test_kdecomments():
@@ -390,6 +406,7 @@ def test_long():
     assert fails(stdchecker.long, "a", "bc")
 
 
+@mark.xfail(reason="FIXME: All fails() tests are not working")
 def test_musttranslatewords():
     """tests stopwords"""
     stdchecker = checks.StandardChecker(checks.CheckerConfig(musttranslatewords=[]))
@@ -636,6 +653,7 @@ def test_simplecaps():
     assert passes(stdchecker.simplecaps, "Flies, flies, everywhere! Ack!", u"Vlieë, oral vlieë! Jig!")
 
 
+@mark.xfail(reason="FIXME: spell checking test not working")
 def test_spellcheck():
     """tests spell checking"""
     stdchecker = checks.StandardChecker(checks.CheckerConfig(targetlanguage="af"))
@@ -648,9 +666,12 @@ def test_spellcheck():
     stdchecker = checks.StandardChecker(checks.CheckerConfig(targetlanguage="af"))
     assert fails(stdchecker.spellcheck, "Mozilla is wonderful", "Mozillaaa is wonderlik")
     # We should pass the test if the "error" occurs in the English
-    assert passes(stdchecker.spellcheck, "Mozilla is wonderful", "Mozilla is wonderlik")
+    assert passes(stdchecker.spellcheck, "Mozillaxxx is wonderful", "Mozillaxxx is wonderlik")
     stdchecker = checks.StandardChecker(checks.CheckerConfig(targetlanguage="af", notranslatewords=["Mozilla"]))
     assert passes(stdchecker.spellcheck, "Mozilla is wonderful", "Mozilla is wonderlik")
+    # Some variables were still being spell checked
+    mozillachecker = checks.MozillaChecker(checkerconfig=checks.CheckerConfig(targetlanguage="af"))
+    assert passes(mozillachecker.spellcheck, "&brandShortName.labels; is wonderful", "&brandShortName.label; is wonderlik")
 
 
 def test_startcaps():

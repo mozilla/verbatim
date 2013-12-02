@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright 2002-2006 Zuza Software Foundation
+# Copyright 2002-2013 Zuza Software Foundation
 #
 # This file is part of translate.
 #
@@ -36,6 +36,52 @@ Specifications
     XML elements are allowed in entity values. A number of things that are
     allowed will just break the resulting document, Mozilla forbids these
     in their DTD parser.
+
+Dialects
+    There are two dialects:
+
+    - Regular DTD
+    - Android DTD
+
+    Both dialects are similar, but the Android DTD uses some particular escapes
+    that regular DTDs don't have.
+
+Escaping in regular DTD
+    In DTD usually there are characters escaped in the entities. In order to
+    ease the translation some of those escaped characters are unescaped when
+    reading from, or converting, the DTD, and that are escaped again when
+    saving, or converting to a DTD.
+
+    In regular DTD the following characters are usually or sometimes escaped:
+
+    - The % character is escaped using &#037; or &#37; or &#x25;
+    - The " character is escaped using &quot;
+    - The ' character is escaped using &apos; (partial roundtrip)
+    - The & character is escaped using &amp; (not yet implemented)
+    - The < character is escaped using &lt; (not yet implemented)
+    - The > character is escaped using &gt; (not yet implemented)
+
+    Besides the previous ones there are a lot of escapes for a huge number of
+    characters. This escapes usually have the form of &#NUMBER; where NUMBER
+    represents the numerical code for the character.
+
+    There are a few particularities in DTD escaping. Some of the escapes are
+    not yet implemented since they are not really necessary, or because its
+    implementation is too hard.
+
+    A special case is the ' escaping using &apos; which doesn't provide a full
+    roundtrip conversion in order to support some special Mozilla DTD files.
+
+    Also the " character is never escaped in the case that the previous
+    character is = (the sequence =" is present on the string) in order to avoid
+    escaping the " character indicating an attribute assignment, for example in
+    a href attribute for an a tag in HTML (anchor tag).
+
+Escaping in Android DTD
+    It has the sames escapes as in regular DTD, plus this ones:
+
+    - The ' character is escaped using \&apos; or \' or \u0027
+    - The " character is escaped using \&quot;
 """
 
 from translate.storage import base
@@ -59,23 +105,38 @@ ending in :attr:`.labelsuffixes` into accelerator notation"""
 
 def quoteforandroid(source):
     """Escapes a line for Android DTD files. """
-    if u'%' in source:
-        source = source.replace(u"%", u"&#x25;")
-    source = source.replace(u"'", u'\\\'').replace(u'"', u'\\&quot;')
-    value = quote.quotestr(source)
-    return value.encode('utf-8')
+    # Replace "'" character with the \u0027 escape. Other possible replaces are
+    # "\\&apos;" or "\\'".
+    source = source.replace(u"'", u"\\u0027")
+    source = source.replace(u"\"", u"\\&quot;")
+    value = quotefordtd(source)  # value is an UTF-8 encoded string.
+    return value
+
+
+def unquotefromandroid(source):
+    """Unquotes a quoted Android DTD definition."""
+    value = unquotefromdtd(source)  # value is an UTF-8 encoded string.
+    value = value.replace(u"\\&apos;", u"'")
+    value = value.replace(u"\\'", u"'")
+    value = value.replace(u"\\u0027", u"'")
+    value = value.replace("\\\"", "\"")  # This converts \&quot; to ".
+    return value
 
 
 def quotefordtd(source):
-    if '%' in source:
-        source = source.replace("%", "&#x25;")
+    """Quotes and escapes a line for regular DTD files."""
+    source = source.replace("%", "&#037;")  # Always escape % sign as &#037;.
+    #source = source.replace("<", "&lt;")  # Not really so useful.
+    #source = source.replace(">", "&gt;")  # Not really so useful.
     if '"' in source:
-        if "'" in source:
-            value = "'" + source.replace("'", '&apos;') + "'"
+        source = source.replace("'", "&apos;")  # This seems not to runned.
+        if '="' not in source:  # Avoid escaping " chars in href attributes.
+            source = source.replace("\"", "&quot;")
+            value = "\"" + source + "\""  # Quote using double quotes.
         else:
-            value = quote.singlequotestr(source)
+            value = "'" + source + "'"  # Quote using single quotes.
     else:
-        value = quote.quotestr(source)
+        value = "\"" + source + "\""  # Quote using double quotes.
     return value.encode('utf-8')
 
 
@@ -84,14 +145,23 @@ def unquotefromdtd(source):
     # extract the string, get rid of quoting
     if len(source) == 0:
         source = '""'
+    # The quote characters should be the first and last characters in the
+    # string. Of course there could also be quote characters within the string.
     quotechar = source[0]
     extracted, quotefinished = quote.extractwithoutquotes(source, quotechar, quotechar, allowreentry=False)
-    if quotechar == "'" and "&apos;" in extracted:
+    extracted = extracted.decode('utf-8')
+    if quotechar == "'":
         extracted = extracted.replace("&apos;", "'")
+    extracted = extracted.replace("&quot;", "\"")
+    extracted = extracted.replace("&#x0022;", "\"")
+    # FIXME these should probably be handled with a lookup
+    extracted = extracted.replace("&#187;", u"»")
+    extracted = extracted.replace("&#037;", "%")
+    extracted = extracted.replace("&#37;", "%")
     extracted = extracted.replace("&#x25;", "%")
-    # the quote characters should be the first and last characters in the string
-    # of course there could also be quote characters within the string; not handled here
-    return extracted.decode('utf-8')
+    #extracted = extracted.replace("&lt;", "<")  # Not really so useful.
+    #extracted = extracted.replace("&gt;", ">")  # Not really so useful.
+    return extracted
 
 
 def removeinvalidamps(name, value):
@@ -169,7 +239,10 @@ class dtdunit(base.TranslationUnit):
 
     def getsource(self):
         """gets the unquoted source string"""
-        return unquotefromdtd(self.definition)
+        if self.android:
+            return unquotefromandroid(self.definition)
+        else:
+            return unquotefromdtd(self.definition)
     source = property(getsource, setsource)
 
     def settarget(self, target):
@@ -184,7 +257,10 @@ class dtdunit(base.TranslationUnit):
 
     def gettarget(self):
         """gets the unquoted target string"""
-        return unquotefromdtd(self.definition)
+        if self.android:
+            return unquotefromandroid(self.definition)
+        else:
+            return unquotefromdtd(self.definition)
     target = property(gettarget, settarget)
 
     def getid(self):

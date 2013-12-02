@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from py.test import raises
+from pytest import raises
 
 from translate.misc import wStringIO
 from translate.misc.multistring import multistring
@@ -26,6 +26,38 @@ class TestHelpers():
         assert pypo.unescape(r"\\\nkoei\\\n") == "\\\nkoei\\\n"
         assert pypo.unescape(r"\"\\koei\"\\") == "\"\\koei\"\\"
         assert pypo.unescape(r"\\\rkoei\r\\") == "\\\rkoei\r\\"
+
+    def test_quoteforpo(self):
+        """Special escaping routine to manage newlines and linewrap in PO"""
+        # Simple case
+        assert pypo.quoteforpo("Some test") == ['"Some test"']
+        # Newline handling
+        assert pypo.quoteforpo("One\nTwo\n") == ['""', '"One\\n"', '"Two\\n"']
+        # First line wrapping
+        assert pypo.quoteforpo("A very long sentence. A very long sentence. A very long sentence. A ver") == \
+                             ['"A very long sentence. A very long sentence. A very long sentence. A ver"']
+        assert pypo.quoteforpo("A very long sentence. A very long sentence. A very long sentence. A very") == \
+                              ['""',
+                               '"A very long sentence. A very long sentence. A very long sentence. A very"']
+        # Long line with a newline
+        assert pypo.quoteforpo("A very long sentence. A very long sentence. A very long sentence. A very lon\n") == \
+                             ['""', '"A very long sentence. A very long sentence. A very long sentence. A very "', '"lon\\n"']
+        # Special 77 char failure.
+        assert pypo.quoteforpo("Ukuba uyayiqonda into eyenzekayo, \nungaxelela i-&brandShortName; ukuba iqalise ukuthemba ufaniso lwale sayithi. \n<b>Nokuba uyayithemba isayithi, le mposiso isenokuthetha ukuba   kukho umntu \nobhucabhuca ukudibanisa kwakho.</b>") == \
+                             ['""',
+                              '"Ukuba uyayiqonda into eyenzekayo, \\n"',
+                              '"ungaxelela i-&brandShortName; ukuba iqalise ukuthemba ufaniso lwale sayithi. "',
+                              '"\\n"',
+                              '"<b>Nokuba uyayithemba isayithi, le mposiso isenokuthetha ukuba   kukho umntu "',
+                              '"\\n"',
+                              '"obhucabhuca ukudibanisa kwakho.</b>"']
+
+    def test_quoteforpo_escaped_quotes(self):
+        """Ensure that we don't break \" in two when wrapping
+
+	See :bug:`3140`
+	"""
+        assert pypo.quoteforpo('''You can get a copy of your Recovery Key by going to &syncBrand.shortName.label; Options on your other device, and selecting  "My Recovery Key" under "Manage Account".''') == [u'""', u'"You can get a copy of your Recovery Key by going to "', u'"&syncBrand.shortName.label; Options on your other device, and selecting  \\""', u'"My Recovery Key\\" under \\"Manage Account\\"."']
 
 
 class TestPYPOUnit(test_po.TestPOUnit):

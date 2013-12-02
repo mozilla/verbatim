@@ -30,7 +30,8 @@ from exceptions import NotImplementedError
 import translate.i18n
 from translate.misc.multistring import multistring
 from translate.misc.typecheck import accepts, Self, IsOneOf
-from translate.storage.placeables import StringElem, general, parse as rich_parse
+from translate.storage.placeables import (StringElem, general,
+                                          parse as rich_parse)
 from translate.storage.workflow import StateEnum as states
 
 
@@ -60,8 +61,8 @@ class ParseError(Exception):
 class TranslationUnit(object):
     """Base class for translation units.
 
-    Our concept of a *translation unit* is influenced heavily by XLIFF:
-    http://www.oasis-open.org/committees/xliff/documents/xliff-specification.htm
+    Our concept of a *translation unit* is influenced heavily by `XLIFF
+    <http://docs.oasis-open.org/xliff/xliff-core/xliff-core.html>`_.
 
     As such most of the method- and variable names borrows from XLIFF
     terminology.
@@ -152,6 +153,7 @@ class TranslationUnit(object):
         self._store = store
         return dump
 
+    @classmethod
     def rich_to_multistring(cls, elem_list):
         """Convert a "rich" string tree to a ``multistring``:
 
@@ -161,7 +163,6 @@ class TranslationUnit(object):
            multistring(u'foo bar')
         """
         return multistring([unicode(elem) for elem in elem_list])
-    rich_to_multistring = classmethod(rich_to_multistring)
 
     def multistring_to_rich(self, mulstring):
         """Convert a multistring to a list of "rich" string trees:
@@ -177,13 +178,13 @@ class TranslationUnit(object):
         return [rich_parse(mulstring, self.rich_parsers)]
 
     def setsource(self, source):
-        """Sets the source string to the given value."""
+        """Set the source string to the given value."""
         self._rich_source = None
         self._source = source
     source = property(lambda self: self._source, setsource)
 
     def settarget(self, target):
-        """Sets the target string to the given value."""
+        """Set the target string to the given value."""
         self._rich_target = None
         self._target = target
     target = property(lambda self: self._target, settarget)
@@ -439,6 +440,7 @@ class TranslationUnit(object):
         """This unit in a list."""
         return [self]
 
+    @classmethod
     def buildfromunit(cls, unit):
         """Build a native unit from a foreign unit, preserving as much
         information as possible."""
@@ -454,7 +456,6 @@ class TranslationUnit(object):
         if notes:
             newunit.addnote(notes)
         return newunit
-    buildfromunit = classmethod(buildfromunit)
 
     xid = property(lambda self: None, lambda self, value: None)
     rid = property(lambda self: None, lambda self, value: None)
@@ -507,33 +508,33 @@ class TranslationStore(object):
     targetlanguage = None
 
     def __init__(self, unitclass=None):
-        """Constructs a blank TranslationStore."""
+        """Construct a blank TranslationStore."""
         self.units = []
         if unitclass:
             self.UnitClass = unitclass
 
     def getsourcelanguage(self):
-        """Gets the source language for this store"""
+        """Get the source language for this store."""
         return self.sourcelanguage
 
     def setsourcelanguage(self, sourcelanguage):
-        """Sets the source language for this store"""
+        """Set the source language for this store."""
         self.sourcelanguage = sourcelanguage
 
     def gettargetlanguage(self):
-        """Gets the target language for this store"""
+        """Get the target language for this store."""
         return self.targetlanguage
 
     def settargetlanguage(self, targetlanguage):
-        """Sets the target language for this store"""
+        """Set the target language for this store."""
         self.targetlanguage = targetlanguage
 
     def getprojectstyle(self):
-        """Gets the project type for this store"""
+        """Get the project type for this store."""
         return getattr(self, '_project_style', None)
 
     def setprojectstyle(self, project_style):
-        """Sets the project type for this store"""
+        """Set the project type for this store."""
         self._project_style = project_style
 
     def unit_iter(self):
@@ -546,7 +547,7 @@ class TranslationStore(object):
         return [unit for unit in self.unit_iter()]
 
     def addunit(self, unit):
-        """Appends the given unit to the object's list of units.
+        """Append the given unit to the object's list of units.
 
         This method should always be used rather than trying to modify the
         list manually.
@@ -558,7 +559,7 @@ class TranslationStore(object):
         self.units.append(unit)
 
     def addsourceunit(self, source):
-        """Adds and returns a new unit with the given source string.
+        """Add and returns a new unit with the given source string.
 
         :rtype: :class:`TranslationUnit`
         """
@@ -572,7 +573,7 @@ class TranslationStore(object):
         return self.id_index.get(id, None)
 
     def findunit(self, source):
-        """Finds the unit with the given source string.
+        """Find the unit with the given source string.
 
         :rtype: :class:`TranslationUnit` or None
         """
@@ -586,7 +587,7 @@ class TranslationStore(object):
         return None
 
     def findunits(self, source):
-        """Finds the units with the given source string.
+        """Find the units with the given source string.
 
         :rtype: :class:`TranslationUnit` or None
         """
@@ -604,7 +605,7 @@ class TranslationStore(object):
         return None
 
     def translate(self, source):
-        """Returns the translated string for a given source string.
+        """Return the translated string for a given source string.
 
         :rtype: String or None
         """
@@ -704,7 +705,7 @@ class TranslationStore(object):
         return dump
 
     def isempty(self):
-        """Returns True if the object doesn't contain any translation units."""
+        """Return True if the object doesn't contain any translation units."""
         if len(self.units) == 0:
             return True
         for unit in self.units:
@@ -722,13 +723,13 @@ class TranslationStore(object):
             if filename:
                 self.filename = filename
 
+    @classmethod
     def parsestring(cls, storestring):
-        """Converts the string representation back to an object."""
+        """Convert the string representation back to an object."""
         newstore = cls()
         if storestring:
             newstore.parse(storestring)
         return newstore
-    parsestring = classmethod(parsestring)
 
     def detect_encoding(self, text, default_encodings=None):
         if not default_encodings:
@@ -753,9 +754,14 @@ class TranslationStore(object):
                     encodings.append(encoding)
         else:
             encodings.append(self.encoding)
-            if detected_encoding and detected_encoding['encoding'] != self.encoding:
-                logging.warn("trying to parse %s with encoding: %s but detected encoding is %s (confidence: %s)",
-                             self.filename, self.encoding, detected_encoding['encoding'], detected_encoding['confidence'])
+            if (detected_encoding and
+                    detected_encoding['encoding'] != self.encoding and
+                    detected_encoding['confidence'] != 1.0):
+                logging.warn("trying to parse %s with encoding: %s but "
+                             "detected encoding is %s (confidence: %s)",
+                             self.filename, self.encoding,
+                             detected_encoding['encoding'],
+                             detected_encoding['confidence'])
             encodings.append(self.encoding)
 
         for encoding in encodings:
@@ -775,7 +781,7 @@ class TranslationStore(object):
         self.units = pickle.loads(data).units
 
     def savefile(self, storefile):
-        """Writes the string representation to the given file (or filename)."""
+        """Write the string representation to the given file (or filename)."""
         storestring = str(self)
         if isinstance(storefile, basestring):
             mode = 'w'
@@ -807,6 +813,7 @@ class TranslationStore(object):
             fileobj = fileobj.__class__(filename, mode)
         self.savefile(fileobj)
 
+    @classmethod
     def parsefile(cls, storefile):
         """Reads the given file (or opens the given filename) and parses back
         to an object."""
@@ -826,7 +833,6 @@ class TranslationStore(object):
         newstore.fileobj = storefile
         newstore._assignname()
         return newstore
-    parsefile = classmethod(parsefile)
 
     @property
     def merge_on(self):

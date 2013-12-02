@@ -24,10 +24,13 @@ See: http://docs.translatehouse.org/projects/translate-toolkit/en/latest/command
 for examples and usage instructions.
 """
 
+import logging
 import sys
 
-from translate.storage import po
-from translate.storage import properties
+from translate.storage import po, properties
+
+
+logger = logging.getLogger(__name__)
 
 
 def _collapse(store, units):
@@ -139,7 +142,8 @@ class prop2po:
                 waitingcomments = []
                 thetargetfile.addunit(origpo)
             elif translatedpo is not None:
-                print >> sys.stderr, "error converting original properties definition %s" % origprop.name
+                logger.error("didn't convert original property definition '%s'",
+                             origprop.name)
         if self.personality == "gaia":
             thetargetfile = self.fold_gaia_plurals(thetargetfile)
         thetargetfile.removeduplicates(duplicatestyle)
@@ -186,8 +190,8 @@ class prop2po:
 
         # if everything went well, there should be nothing left in plurals
         if len(plurals) != 0:
-            print >> sys.stderr, "Not all plural units converted correctly:"
-            print >> sys.stderr, "\n".join(plurals.keys())
+            logger.warning("Not all plural units converted correctly:" +
+                           "\n".join(plurals.keys()))
         return new_store
 
     def convertunit(self, propunit, commenttype):
@@ -246,6 +250,7 @@ def convertprop(inputfile, outputfile, templatefile, personality="java",
     outputfile.write(str(outputstore))
     return 1
 
+
 formats = {
     "properties": ("po", convertprop),
     ("properties", "properties"): ("po", convertprop),
@@ -277,6 +282,7 @@ def main(argv=None):
     parser.passthrough.append("personality")
     parser.passthrough.append("encoding")
     parser.run(argv)
+
 
 if __name__ == '__main__':
     main()

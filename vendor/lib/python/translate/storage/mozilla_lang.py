@@ -44,7 +44,7 @@ class LangUnit(base.TranslationUnit):
         else:
             target = self.target
         if self.getnotes():
-            notes = ('').join(["# %s" % note for note in [self.getnotes('developer')]])
+            notes = ('\n').join(["# %s" % note for note in self.getnotes('developer').split("\n")])
             return u"%s\n;%s\n%s%s" % (notes, self.source, target, unchanged)
         return u";%s\n%s%s" % (self.source, target, unchanged)
 
@@ -62,7 +62,9 @@ class LangStore(txt.TxtFile):
     Name = _("Mozilla .lang")
     Extensions = ['lang']
 
-    def __init__(self, inputfile=None, flavour=None, encoding="utf-8"):
+    def __init__(self, inputfile=None, flavour=None, encoding="utf-8", mark_active=False):
+        self.is_active = False
+        self.mark_active = mark_active
         super(LangStore, self).__init__(inputfile, flavour, encoding)
 
     def parse(self, lines):
@@ -75,25 +77,36 @@ class LangStore(txt.TxtFile):
         for lineoffset, line in enumerate(lines):
             line = line.decode(self.encoding).rstrip("\n").rstrip("\r")
 
-            if len(line) == 0:  # Skip blank lines
+            if lineoffset == 0 and line == "## active ##":
+                self.is_active = True
+                continue
+
+            if len(line) == 0 and not readyTrans:  # Skip blank lines
                 continue
 
             if readyTrans:  # If we are expecting a translation, set the target
                 if line != u.source:
                     u.target = line.replace(" {ok}", "")
+                else:
+                    u.target = ""
                 readyTrans = False  # We already have our translation
                 continue
 
             if line.startswith('#'): # A comment
-                comment += line[1:].strip()
+                comment += line[1:].strip() + "\n"
 
             if line.startswith(';'):
                 u = self.addsourceunit(line[1:])
                 readyTrans = True  # Now expecting a translation on the next line
                 u.addlocation("%s:%d" % (self.filename, lineoffset + 1))
                 if comment is not None:
-                    u.addnote(comment, 'developer')
+                    u.addnote(comment[:-1], 'developer')
                     comment = ""
 
     def __str__(self):
-        return u"\n\n\n".join([unicode(unit) for unit in self.units]).encode('utf-8') + "\n"
+        ret_string = ""
+        if self.is_active or self.mark_active:
+            ret_string += "## active ##\n"
+        ret_string += u"\n\n\n".join([unicode(unit) for unit in self.units]).encode('utf-8')
+        ret_string += "\n"
+        return ret_string

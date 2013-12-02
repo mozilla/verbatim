@@ -1,0 +1,6 @@
+# pootle has its own list of dependencies.
+# all non-binary ones are/should be already installed in
+# vendor/lib/python
+
+python-Levenshtein>=0.11.1
+lxml==3.2.4

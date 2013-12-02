@@ -175,18 +175,20 @@ class StringElem(object):
     # METHODS #
     def apply_to_strings(self, f):
         """Apply ``f`` to all actual strings in the tree.
-            :param f: Must take one (str or unicode) argument and return a
-                string or unicode."""
+
+        :param f: Must take one (str or unicode) argument and return a
+                  string or unicode.
+        """
         for elem in self.flatten():
             for i in range(len(elem.sub)):
                 if isinstance(elem.sub[i], basestring):
                     elem.sub[i] = f(elem.sub[i])
 
     def copy(self):
-        """Returns a copy of the sub-tree.
-            This should be overridden in sub-classes with more data.
+	"""Returns a copy of the sub-tree.  This should be overridden in
+	sub-classes with more data.
 
-            NOTE: ``self.renderer`` is **not** copied."""
+	.. note:: ``self.renderer`` is **not** copied."""
         #logging.debug('Copying instance of class %s' % (self.__class__.__name__))
         cp = self.__class__(id=self.id, xid=self.xid, rid=self.rid)
         for sub in self.sub:
@@ -216,7 +218,7 @@ class StringElem(object):
         """Delete the text in the range given by the string-indexes
         ``start_index`` and ``end_index``.
 
-         Partial nodes will only be removed if they are editable.
+        Partial nodes will only be removed if they are editable.
 
         :returns: A ``StringElem`` representing the removed sub-string, the
                   parent node from which it was deleted as well as the offset at
@@ -478,10 +480,13 @@ class StringElem(object):
 
     def get_index_data(self, index):
         """Get info about the specified range in the tree.
-            :returns: A dictionary with the following items:
-                * *elem*: The element in which ``index`` resides.
-                * *index*: Copy of the ``index`` parameter
-                * *offset*: The offset of ``index`` into ``'elem'``."""
+
+        :returns: A dictionary with the following items:
+
+            * *elem*: The element in which ``index`` resides.
+            * *index*: Copy of the ``index`` parameter
+            * *offset*: The offset of ``index`` into ``'elem'``.
+         """
         info = {
             'elem': self.elem_at_offset(index),
             'index': index,
@@ -507,7 +512,7 @@ class StringElem(object):
                     return elem
         return None
 
-    def insert(self, offset, text):
+    def insert(self, offset, text, preferred_parent=None):
         """Insert the given text at the specified offset of this string-tree's
             string (Unicode) representation."""
         if offset < 0 or offset > len(self) + 1:
@@ -603,6 +608,26 @@ class StringElem(object):
         # 4.2 #
         elif before.iseditable and oelem.iseditable:
             #logging.debug('Case 4.2')
+            # We can add to either, but we try hard to add to the correct one
+            # so that we avoid inserting text in the wrong place on undo, for
+            # example.
+            preferred_type = type(preferred_parent)
+            before_type = type(before)
+            oelem_type = type(oelem)
+            if preferred_parent is oelem:
+                # The preferred parent is still in this StringElem
+                return oelem.insert(0, text)
+            elif oelem_type == preferred_type and not before_type == preferred_type:
+                # oelem has the right type and before has the wrong type
+                return oelem.insert(0, text)
+            elif oelem_type != preferred_type and before_type != preferred_type:
+                # Both are the wrong type, so we add it as if neither were
+                # editable
+                bparent = self.get_parent_elem(before)
+                bindex = bparent.sub.index(before)
+                bparent.sub.insert(bindex + 1, text)
+                return True
+
             return before.insert(len(before) + 1, text)  # Reinterpret as a case 2
 
         # 4.3 #
