@@ -1,4 +1,4 @@
-#!/Users/peterbe/virtualenvs/verbatim-pootle2.5/bin/python2.6
+#!/usr/bin/env python
 from django.core import management
 
 if __name__ == "__main__":
